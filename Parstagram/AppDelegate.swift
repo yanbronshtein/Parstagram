@@ -25,7 +25,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                 configuration.server = "https://parse-instagram-app.herokuapp.com/parse"
             })
         )
-        print("Hi")
         return true
     }
     
