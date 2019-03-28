@@ -25,6 +25,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                 configuration.server = "https://parse-instagram-app.herokuapp.com/parse"
             })
         )
+        
+        //If logged in switch to
+        if PFUser.current() != nil {
+            let main = UIStoryboard(name: "Main",bundle: nil)
+            let feedNavigationController = main.instantiateViewController(withIdentifier: "FeedNavigationController")
+            window?.rootViewController = feedNavigationController
+        }
+        
         return true
     }
     
