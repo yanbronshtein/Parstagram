@@ -9,17 +9,43 @@
 import UIKit
 import Parse
 import AlamofireImage
+import MessageInputBar
 class FeedViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
     
     
 
     @IBOutlet weak var tableView: UITableView!
+    
+    let commentBar = MessageInputBar()
+    var showsCommentBar = false
     var posts = [PFObject]()
+    
     override func viewDidLoad() {
         super.viewDidLoad()
 
         tableView.delegate = self
         tableView.dataSource = self
+        
+        tableView.keyboardDismissMode = .interactive //dismiss keyboard by dragging down table view
+        
+        let center = NotificationCenter.default
+        center.addObserver(self, selector: #selector(keyboardWillBeHidden(note:)), name: UIResponder.keyboardWillHideNotification, object: nil) //grab "post office", when event happens(keyboard will hide)
+        
+    }
+    
+    @objc func keyboardWillBeHidden(note: Notification) {
+        commentBar.inputTextView.text = nil //clear text every time keyboard is dismissed
+        showsCommentBar = false
+        becomeFirstResponder()
+        
+    }
+    
+    override var inputAccessoryView: UIView? {
+        return commentBar
+    }
+    
+    override var canBecomeFirstResponder: Bool {
+        return showsCommentBar
     }
     
     //Pulls in post that was just created
@@ -40,7 +66,7 @@ class FeedViewController: UIViewController, UITableViewDelegate, UITableViewData
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         let post = posts[section]
         let comments = (post["comments"] as? [PFObject]) ?? [] //Use nil coalescing operator. If nil set to empty array
-        return comments.count + 1 //1 for actual post and one for each comment
+        return comments.count + 2 //1 for actual post and one for each comment and add a comment cell
     }
     
     
@@ -64,12 +90,18 @@ class FeedViewController: UIViewController, UITableViewDelegate, UITableViewData
             
             return cell
 
-        } else {
+        } else if indexPath.row <= comments.count {
             let cell = tableView.dequeueReusableCell(withIdentifier: "CommentCell") as! CommentCell
+            
             let comment = comments[indexPath.row - 1]
             cell.commentLabel.text = comment["text"] as? String
+            
             let user = comment["author"] as! PFUser
             cell.nameLabel.text = user.username
+            
+            return cell
+        } else {
+            let cell = tableView.dequeueReusableCell(withIdentifier: "AddCommentCell")!
             
             return cell
         }
@@ -79,19 +111,24 @@ class FeedViewController: UIViewController, UITableViewDelegate, UITableViewData
     //every time user taps, get callback
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         let post = posts[indexPath.row]
+        let comments = (post["comments"] as? [PFObject]) ?? []
         
-        let comment = PFObject(className: "Comments")
-        comment["text"] = "This is a random comment"
-        comment["posts"] = post
-        comment["author"] = PFUser.current()!
-        post.add(comment, forKey: "comments")
-        post.saveInBackground { (success, error) in
-            if success {
-                print("Comment saved")
-            } else {
-                print("Error saving comment")
-            }
+        if indexPath.row ==  comments.count + 1 {
+            showsCommentBar = true //show comment if row selected
+            becomeFirstResponder() // cause re-evaluation
+            commentBar.inputTextView.becomeFirstResponder() //raise keyboard. responder = "focus"
         }
+//        comment["text"] = "This is a random comment"
+//        comment["posts"] = post
+//        comment["author"] = PFUser.current()!
+//        post.add(comment, forKey: "comments")
+//        post.saveInBackground { (success, error) in
+//            if success {
+//                print("Comment saved")
+//            } else {
+//                print("Error saving comment")
+//            }
+//        }
     }
     func numberOfSections(in tableView: UITableView) -> Int {
         return posts.count //as many sections as you have posts
